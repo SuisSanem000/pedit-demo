@@ -115,7 +115,7 @@ bun run src/index.ts viewer --dir ..</pre>
       </div>
       <div class="layout">
         <aside>
-          <div class="source-bar">
+          <div class="source-bar" id="dropZone">
             <div>
               <span>Opened folder:</span>
               <div class="source-path" id="sourceLabel">-</div>
@@ -125,6 +125,7 @@ bun run src/index.ts viewer --dir ..</pre>
               <input id="localPbmPicker" type="file" webkitdirectory directory multiple hidden />
               <button class="btn" id="openDirPathBtn" hidden>Switch Server Folder</button>
             </div>
+            <small style="color:var(--muted);">Tip: Drag &amp; drop a <code>.pbm</code> folder here (nothing is uploaded).</small>
           </div>
           <div class="search-box">
             <input id="searchInput" type="search" placeholder="Filter .pbm problems..." />
@@ -456,22 +457,86 @@ bun run src/index.ts viewer --dir ..</pre>
     async function collectFromDirectoryHandle(dirHandle, prefix, grouped, depth = 0) {
       if (depth > 4) return;
       const curPath = prefix ? `${prefix}/${dirHandle.name}` : dirHandle.name;
-      if (dirHandle.name.endsWith('.pbm')) {
-        const entries = [];
-        for await (const [name, handle] of dirHandle.entries()) {
-          if (handle.kind === 'file') {
-            entries.push({ inner: name, file: await handle.getFile() });
-          }
+      const directFiles = [];
+      const subDirs = [];
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind === 'file') {
+          directFiles.push({ inner: name, file: await handle.getFile() });
+        } else if (handle.kind === 'directory' && !name.startsWith('.') && name !== 'node_modules' && name !== 'private-problems') {
+          subDirs.push(handle);
         }
-        grouped.set(curPath, entries);
+      }
+      const looksLikePbm =
+        dirHandle.name.endsWith('.pbm') ||
+        directFiles.some(f => f.inner === 'handler.yml' || /^problem\.[a-z]{2}\.tex$/.test(f.inner));
+      if (looksLikePbm) {
+        grouped.set(curPath, directFiles);
         return;
       }
-      for await (const [name, handle] of dirHandle.entries()) {
-        if (handle.kind === 'directory' && !name.startsWith('.') && name !== 'node_modules' && name !== 'private-problems') {
-          await collectFromDirectoryHandle(handle, curPath, grouped, depth + 1);
-        }
+      for (const sub of subDirs) {
+        await collectFromDirectoryHandle(sub, curPath, grouped, depth + 1);
       }
     }
+
+    async function collectFromEntry(entry, prefix, grouped, depth = 0) {
+      if (depth > 4 || !entry) return;
+      if (!entry.isDirectory) return;
+      const curPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const reader = entry.createReader();
+      const children = await new Promise((resolve) => {
+        const all = [];
+        const readBatch = () => reader.readEntries((batch) => {
+          if (!batch.length) resolve(all);
+          else { all.push(...batch); readBatch(); }
+        }, () => resolve(all));
+        readBatch();
+      });
+
+      const directFiles = [];
+      const subDirs = [];
+      for (const ch of children) {
+        if (ch.isFile) {
+          const file = await new Promise((res) => ch.file(res));
+          directFiles.push({ inner: ch.name, file });
+        } else if (ch.isDirectory && !ch.name.startsWith('.') && ch.name !== 'node_modules' && ch.name !== 'private-problems') {
+          subDirs.push(ch);
+        }
+      }
+      const looksLikePbm =
+        entry.name.endsWith('.pbm') ||
+        directFiles.some(f => f.inner === 'handler.yml' || /^problem\.[a-z]{2}\.tex$/.test(f.inner));
+      if (looksLikePbm) {
+        grouped.set(curPath, directFiles);
+        return;
+      }
+      for (const sub of subDirs) {
+        await collectFromEntry(sub, curPath, grouped, depth + 1);
+      }
+    }
+
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.background = '#ddf4ff';
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.background = '#f8fafc';
+    });
+    dropZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      dropZone.style.background = '#f8fafc';
+      const items = Array.from(e.dataTransfer?.items || []);
+      const grouped = new Map();
+      for (const item of items) {
+        const entry = item.webkitGetAsEntry?.();
+        if (entry) await collectFromEntry(entry, '', grouped);
+      }
+      if (grouped.size) {
+        await ingestPbmEntries(grouped, 'dropped folder');
+      } else {
+        alert('Drop a .pbm problem folder (or a folder containing .pbm folders).');
+      }
+    });
 
     document.getElementById('openLocalPbmBtn').addEventListener('click', async () => {
       if (typeof window.showDirectoryPicker === 'function') {
@@ -482,7 +547,7 @@ bun run src/index.ts viewer --dir ..</pre>
           await ingestPbmEntries(grouped, dirHandle.name);
         } catch (err) {
           if (err && err.name === 'AbortError') return;
-          document.getElementById('localPbmPicker').click();
+          alert('Could not read folder: ' + (err?.message || err));
         }
       } else {
         document.getElementById('localPbmPicker').click();
