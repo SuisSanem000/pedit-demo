@@ -10,7 +10,6 @@
     "dev": "bun run src/index.ts",
     "viewer": "bun run src/viewer-server.ts",
     "export": "bun run src/export-static.ts",
-    "compile": "bun build ./src/index.ts --compile --outfile pedit",
     "test": "bun test"
   },
   "dependencies": {

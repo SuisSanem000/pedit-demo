@@ -8,7 +8,7 @@ import { buildProblemPdfs } from "./pdf.ts";
 
 export function startViewerServer(opts?: { port?: number; rootDir?: string }) {
   const port = opts?.port ?? Number(process.env.PORT || 3456);
-  let rootDir = resolve(opts?.rootDir || process.env.PEDIT_PROBLEMS_DIR || join(import.meta.dir, "../.."));
+  const rootDir = resolve(opts?.rootDir || process.env.PEDIT_PROBLEMS_DIR || join(import.meta.dir, "../.."));
 
   function json(data: unknown, status = 200): Response {
     return new Response(JSON.stringify(data, null, 2), {
@@ -35,16 +35,6 @@ export function startViewerServer(opts?: { port?: number; rootDir?: string }) {
       }
 
       if (pathname === "/api/problems" && req.method === "GET") {
-        const problems = discoverProblems(rootDir, includePrivate);
-        return json({ mode: "server", root: rootDir, sourceLabel: rootDir, problems });
-      }
-
-      if (pathname === "/api/open-dir" && req.method === "POST") {
-        const body = (await req.json().catch(() => ({}))) as { dir?: string };
-        if (!body.dir || !existsSync(resolve(body.dir))) {
-          return json({ error: "Directory does not exist" }, 400);
-        }
-        rootDir = resolve(body.dir);
         const problems = discoverProblems(rootDir, includePrivate);
         return json({ mode: "server", root: rootDir, sourceLabel: rootDir, problems });
       }

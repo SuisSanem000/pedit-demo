@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -14,64 +15,367 @@
       --accent: #0969da;
       --accent-soft: #ddf4ff;
     }
-    * { box-sizing: border-box; }
-    [hidden] { display: none !important; }
-    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: var(--text); background: var(--bg); line-height: 1.5; }
-    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.85rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    header h1 { margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem; }
-    .badge { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-    .cli-section { max-width: 1280px; margin: 1rem auto; padding: 0 1rem; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; }
-    .cli-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    .cli-top h2 { margin: 0 0 0.25rem; font-size: 1.05rem; }
-    .cli-top p { margin: 0; color: var(--muted); font-size: 0.9rem; }
-    .cli-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.9rem; }
-    pre { margin: 0; padding: 0.8rem 0.95rem; background: #f6f8fa; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.8rem; line-height: 1.45; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th, td { border: 1px solid var(--border); padding: 0.42rem 0.6rem; text-align: left; }
-    th { background: #f6f8fa; }
-    details summary { cursor: pointer; font-weight: 600; font-size: 0.88rem; color: var(--accent); margin-top: 0.75rem; }
-    .viewer-section { max-width: 1280px; margin: 0 auto 1.5rem; padding: 0 1rem; }
-    .viewer-shell { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; height: 78vh; min-height: 540px; }
-    .viewer-bar { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; background: #f8fafc; }
-    .layout { flex: 1; display: grid; grid-template-columns: 310px 1fr; min-height: 0; }
-    aside { border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; background: var(--surface); }
-    .source-bar { padding: 0.65rem; border-bottom: 1px solid var(--border); background: #f8fafc; font-size: 0.78rem; color: var(--muted); display: flex; flex-direction: column; gap: 0.45rem; }
-    .source-path { font-family: ui-monospace, SFMono-Regular, monospace; color: var(--text); word-break: break-all; font-weight: 600; }
-    .search-box { padding: 0.55rem 0.65rem; border-bottom: 1px solid var(--border); }
-    .search-box input { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.86rem; }
-    .problem-list { flex: 1; overflow-y: auto; padding: 0.4rem; }
-    .prob-item { width: 100%; text-align: left; border: 1px solid transparent; background: transparent; padding: 0.5rem 0.6rem; border-radius: 6px; cursor: pointer; margin-bottom: 0.2rem; }
-    .prob-item:hover { background: var(--bg); }
-    .prob-item.active { background: var(--accent-soft); border-color: #54aeff; }
-    .prob-title { font-weight: 600; font-size: 0.88rem; display: block; }
-    .prob-meta { font-size: 0.74rem; color: var(--muted); display: flex; justify-content: space-between; margin-top: 0.15rem; gap: 0.35rem; }
-    main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-    .toolbar { border-bottom: 1px solid var(--border); padding: 0.55rem 0.9rem; display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; flex-wrap: wrap; }
-    .group { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-    button.btn, a.btn, label.btn { padding: 0.38rem 0.72rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.82rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; }
-    button.btn.primary, a.btn.primary, label.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-    button.btn.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
-    .tabs { border-bottom: 1px solid var(--border); padding: 0 0.9rem; display: flex; gap: 0.25rem; }
-    .tab { border: none; background: transparent; padding: 0.5rem 0.8rem; cursor: pointer; font-size: 0.84rem; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; }
-    .tab.active { color: var(--text); border-bottom-color: var(--accent); }
-    .content { flex: 1; min-height: 0; padding: 0.7rem; display: flex; flex-direction: column; }
-    .content iframe { width: 100%; height: 100%; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
-    .content pre { flex: 1; overflow: auto; }
-    .empty { margin: auto; text-align: center; color: var(--muted); max-width: 460px; font-size: 0.9rem; }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .cli-section {
+      max-width: 1280px;
+      margin: 1rem auto;
+      padding: 0 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+    }
+
+    .cli-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .cli-top h2 {
+      margin: 0 0 0.25rem;
+      font-size: 1.05rem;
+    }
+
+    .cli-top p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .cli-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 0.9rem;
+    }
+
+    pre {
+      margin: 0;
+      padding: 0.8rem 0.95rem;
+      background: #f6f8fa;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--border);
+      padding: 0.42rem 0.6rem;
+      text-align: left;
+    }
+
+    th {
+      background: #f6f8fa;
+    }
+
+    details summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: var(--accent);
+      margin-top: 0.75rem;
+    }
+
+    .viewer-section {
+      max-width: 1280px;
+      margin: 0 auto 1.5rem;
+      padding: 0 1rem;
+    }
+
+    .viewer-shell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 78vh;
+      min-height: 540px;
+    }
+
+    .viewer-bar {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      background: #f8fafc;
+    }
+
+    .layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 310px 1fr;
+      min-height: 0;
+    }
+
+    aside {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--surface);
+    }
+
+    .source-bar {
+      padding: 0.65rem;
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .source-path {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      color: var(--text);
+      word-break: break-all;
+      font-weight: 600;
+    }
+
+    .search-box {
+      padding: 0.55rem 0.65rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 0.45rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.86rem;
+    }
+
+    .problem-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.4rem;
+    }
+
+    .prob-item {
+      width: 100%;
+      text-align: left;
+      border: 1px solid transparent;
+      background: transparent;
+      padding: 0.5rem 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 0.2rem;
+    }
+
+    .prob-item:hover {
+      background: var(--bg);
+    }
+
+    .prob-item.active {
+      background: var(--accent-soft);
+      border-color: #54aeff;
+    }
+
+    .prob-title {
+      font-weight: 600;
+      font-size: 0.88rem;
+      display: block;
+    }
+
+    .prob-meta {
+      font-size: 0.74rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.15rem;
+      gap: 0.35rem;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .toolbar {
+      border-bottom: 1px solid var(--border);
+      padding: 0.55rem 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    .group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    button.btn,
+    a.btn,
+    label.btn {
+      padding: 0.38rem 0.72rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    button.btn.primary,
+    a.btn.primary,
+    label.btn.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    button.btn.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .tabs {
+      border-bottom: 1px solid var(--border);
+      padding: 0 0.9rem;
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .tab {
+      border: none;
+      background: transparent;
+      padding: 0.5rem 0.8rem;
+      cursor: pointer;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+
+    .content {
+      flex: 1;
+      min-height: 0;
+      padding: 0.7rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .content iframe {
+      width: 100%;
+      height: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .content pre {
+      flex: 1;
+      overflow: auto;
+    }
+
+    .empty {
+      margin: auto;
+      text-align: center;
+      color: var(--muted);
+      max-width: 460px;
+      font-size: 0.9rem;
+    }
+
     @media (max-width: 860px) {
-      .cli-grid { grid-template-columns: 1fr; }
-      .layout { grid-template-columns: 1fr; grid-template-rows: 240px 1fr; }
+      .cli-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 240px 1fr;
+      }
     }
   </style>
 </head>
+
 <body>
   <header>
     <h1><code>pedit</code> CLI &amp; Problem PDF Viewer <span class="badge" id="modeBadge">Loading...</span></h1>
     <div class="group">
-      <a class="btn primary" href="./pedit-macos-arm64" download>CLI (macOS arm64)</a>
-      <a class="btn primary" href="./pedit-linux-x64" download>CLI (Linux x64)</a>
-      <a class="btn" href="./pedit.tar.gz" download>Source (.tar.gz)</a>
+      <a class="btn primary" href="./pedit.tar.gz" download>Download CLI (pedit.tar.gz)</a>
       <a class="btn" href="#viewer">Jump to PDF Viewer</a>
     </div>
   </header>
@@ -81,34 +385,56 @@
       <div class="cli-top">
         <div>
           <h2><code>pedit</code> CLI — AI Problem Editor on Top of Unmodified <code>jtk</code></h2>
-          <p>Uses OpenRouter (default <code>openai/gpt-4o-mini</code>), hidden Jutge specs/skills, and closed-loop <code>jtk</code> verification (never writes <code>*.cor</code>).</p>
+          <p>Uses OpenRouter (default <code>openai/gpt-4o-mini</code>), hidden Jutge specs/skills, and closed-loop
+            <code>jtk</code> verification (never writes <code>*.cor</code>).
+          </p>
         </div>
         <div class="group">
-          <a class="btn primary" href="./pedit-macos-arm64" download>macOS Binary</a>
-          <a class="btn primary" href="./pedit-linux-x64" download>Linux Binary</a>
-          <a class="btn" href="./pedit.tar.gz" download>Source</a>
+          <a class="btn primary" href="./pedit.tar.gz" download>Download CLI (pedit.tar.gz)</a>
         </div>
       </div>
 
       <details>
-        <summary>Quickstart Commands (macOS / Linux / Source)</summary>
+        <summary>Quickstart Commands (CLI + Local Viewer)</summary>
         <div class="cli-grid">
-          <pre># 1. Standalone binary (macOS Apple Silicon, no Bun needed)
-curl -fsSL https://suissanem000.github.io/pedit-demo/pedit-macos-arm64 -o pedit &amp;&amp; chmod +x pedit
-./pedit --help
-./pedit viewer --dir .
-
-# 2. Or run from downloaded Source (~/Downloads/pedit)
+          <pre># After downloading pedit.tar.gz into ~/Downloads (or cloning the repo):
 cd ~/Downloads/pedit &amp;&amp; bun install
+export OPENROUTER_API_KEY="your-key"
+
 bun run src/index.ts --help
+bun run src/index.ts list --dir .. --json
+bun run src/index.ts create ./sum-evens.pbm "Sum of even numbers"
+bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests
 bun run src/index.ts viewer --dir ..</pre>
           <table>
-            <thead><tr><th>Dimension</th><th><code>jtk</code> (Unchanged)</th><th><code>pedit</code> (New CLI)</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Dimension</th>
+                <th><code>jtk</code> (Unchanged)</th>
+                <th><code>pedit</code> (New CLI)</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr><td><strong>Role</strong></td><td>Build, test, PDF, lint, upload</td><td>AI problem editor + viewer</td></tr>
-              <tr><td><strong>Model</strong></td><td>Fixed Jutge API</td><td>OpenRouter (<code>openai/gpt-4o-mini</code>)</td></tr>
-              <tr><td><strong>Prompts</strong></td><td>Hardcoded</td><td>Hidden <code>spec/</code> &amp; <code>skills/</code></td></tr>
-              <tr><td><strong>Loop</strong></td><td>One-shot</td><td>Closed-loop <code>jtk</code> retries</td></tr>
+              <tr>
+                <td><strong>Role</strong></td>
+                <td>Build, test, PDF, lint, upload</td>
+                <td>AI problem editor + viewer</td>
+              </tr>
+              <tr>
+                <td><strong>Model</strong></td>
+                <td>Fixed Jutge API</td>
+                <td>OpenRouter (<code>openai/gpt-4o-mini</code>)</td>
+              </tr>
+              <tr>
+                <td><strong>Prompts</strong></td>
+                <td>Hardcoded</td>
+                <td>Hidden <code>spec/</code> &amp; <code>skills/</code></td>
+              </tr>
+              <tr>
+                <td><strong>Loop</strong></td>
+                <td>One-shot</td>
+                <td>Closed-loop <code>jtk</code> retries</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -133,7 +459,8 @@ bun run src/index.ts viewer --dir ..</pre>
               <button class="btn primary" id="openLocalPbmBtn" type="button">Open .pbm from PC</button>
               <input id="localPbmPicker" type="file" webkitdirectory directory multiple hidden />
             </div>
-            <small style="color:var(--muted);">Tip: Drag &amp; drop a <code>.pbm</code> folder here (nothing is uploaded).</small>
+            <small style="color:var(--muted);">Tip: Drag &amp; drop a <code>.pbm</code> folder here (nothing is
+              uploaded).</small>
           </div>
           <div class="search-box">
             <input id="searchInput" type="search" placeholder="Filter .pbm problems..." />
@@ -165,7 +492,8 @@ bun run src/index.ts viewer --dir ..</pre>
           </div>
 
           <div class="content" id="contentArea">
-            <div class="empty">Select a problem folder on the left, or click <strong>Open .pbm from PC</strong> to view any local <code>.pbm</code> folder directly in your browser.</div>
+            <div class="empty">Select a problem folder on the left, or click <strong>Open .pbm from PC</strong> to view
+              any local <code>.pbm</code> folder directly in your browser.</div>
           </div>
         </main>
       </div>
@@ -193,7 +521,7 @@ bun run src/index.ts viewer --dir ..</pre>
           data = await res.json();
           state.mode = 'server';
         }
-      } catch {}
+      } catch { }
 
       if (!data) {
         const res = await fetch('./manifest.json');
@@ -600,7 +928,7 @@ bun run src/index.ts viewer --dir ..</pre>
     });
 
     function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
     document.getElementById('searchInput').addEventListener('input', renderList);
@@ -614,4 +942,5 @@ bun run src/index.ts viewer --dir ..</pre>
     init();
   </script>
 </body>
+
 </html>

@@ -11,7 +11,7 @@
 ## What This Achieves
 
 - **Unified toolset:** Combines the AI problem-editor CLI and Problem PDF Viewer in `pedit/`, wrapping unmodified `jtk` (`4.4.50`).
-- **Standalone or source:** Run directly with `bun`, link globally (`bun link`), or compile into a standalone binary (`bun run compile`).
+- **Run with Bun or link globally:** Run directly with `bun run src/index.ts ...` or link globally with `bun link` (`pedit ...`).
 - **Low-cost OpenRouter AI:** Uses `@openrouter/sdk` (default `openai/gpt-4o-mini`), hidden `spec/` & `skills/` prompts, and closed-loop `jtk` retries.
 - **Visual PDF review:** Inspect `.pbm` PDFs, LaTeX, solutions, and samples locally (`pedit viewer`) or on GitHub Pages (with drag-and-drop / **Open `.pbm` from PC**).
 
@@ -57,22 +57,21 @@ cd pedit && bun install
 # 1. Unit tests (write guards blocking *.cor/problem.yml, YAML edits, .pbm discovery)
 bun test
 
-# 2. Standalone binary build & smoke check
-bun run compile
-./pedit --help
-./pedit list --dir .. --json
+# 2. CLI smoke check
+bun run src/index.ts --help
+bun run src/index.ts list --dir .. --json
 
 # 3. Verify unmodified jtk integration on a demo problem
-./pedit build ../generated-demo/sum-evens.pbm --json
-./pedit lint ../generated-demo/sum-evens.pbm --json
+bun run src/index.ts build ../generated-demo/sum-evens.pbm --json
+bun run src/index.ts lint ../generated-demo/sum-evens.pbm --json
 
 # 4. Live AI closed-loop test (requires OPENROUTER_API_KEY)
-./pedit create /tmp/test-sum.pbm "Read two integers a and b and print a+b." --json
-./pedit edit /tmp/test-sum.pbm --preset add-edge-tests --json
+bun run src/index.ts create /tmp/test-sum.pbm "Read two integers a and b and print a+b." --json
+bun run src/index.ts edit /tmp/test-sum.pbm --preset add-edge-tests --json
 rm -rf /tmp/test-sum.pbm
 
 # 5. Live PDF Problem Viewer (open http://localhost:3456 in browser)
-./pedit viewer --dir .. --port 3456
+bun run src/index.ts viewer --dir .. --port 3456
 ```
 
 - Note: In `pedit-demo` (public demo mirror), replace `../generated-demo/sum-evens.pbm` with `../demo-problems/sum-evens.pbm`.
