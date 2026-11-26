@@ -15,6 +15,7 @@
       --accent-soft: #ddf4ff;
     }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: var(--text); background: var(--bg); line-height: 1.5; }
     header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.85rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
     header h1 { margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem; }
@@ -281,6 +282,10 @@ bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
       const p = state.selected;
       if (!p) return;
       document.getElementById('selectedTitle').textContent = `${p.title} (${p.name})`;
+      const isLiveServerItem = state.mode === 'server' && !p.localFiles;
+      document.getElementById('rebuildPdfBtn').hidden = !isLiveServerItem;
+      document.getElementById('makeBtn').hidden = !isLiveServerItem;
+      document.getElementById('lintBtn').hidden = !isLiveServerItem;
       const langsEl = document.getElementById('langButtons');
       langsEl.innerHTML = '';
       for (const l of p.languages) {
@@ -340,11 +345,11 @@ bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
 
       const pdfUrl = currentPdfUrl(false);
       openLink.hidden = !pdfUrl;
-      if (pdfUrl) openLink.href = pdfUrl;
+      openLink.href = pdfUrl || '#';
 
       if (state.tab === 'pdf') {
         if (!pdfUrl) {
-          area.innerHTML = `<div class="empty">No precompiled PDF found for this problem (${escapeHtml(state.lang || 'en')}).${state.mode === 'server' && !p.localFiles ? ' Click <strong>Rebuild PDF</strong> to compile via <code>jtk make pdf</code>.' : ' Run <code>pedit pdf &lt;problem.pbm&gt;</code> locally to generate its PDF.'}</div>`;
+          area.innerHTML = `<div class="empty">No precompiled PDF found for this problem (${escapeHtml(state.lang || 'en')}).${state.mode === 'server' && !p.localFiles ? ' Click <strong>Rebuild PDF</strong> to compile via <code>jtk make pdf</code>.' : ' Run <code>pedit pdf &lt;problem.pbm&gt;</code> locally to generate its PDF, or inspect the LaTeX / Solution / Samples tabs above.'}</div>`;
         } else {
           area.innerHTML = `<iframe src="${pdfUrl}"></iframe>`;
         }
@@ -425,6 +430,10 @@ bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
             pdfs[pdfM[1]] = URL.createObjectURL(file);
             continue;
           }
+          if (inner === 'problem.pdf' || inner === 'statement.pdf') {
+            if (!pdfs.en) pdfs.en = URL.createObjectURL(file);
+            continue;
+          }
           const texM = /^problem\.([a-z]{2})\.tex$/.exec(inner);
           if (texM) langs.add(texM[1]);
           const ymlM = /^problem\.([a-z]{2})\.yml$/.exec(inner);
@@ -453,9 +462,18 @@ bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
         });
       }
 
-      loaded.sort((a, b) => a.relPath.localeCompare(b.relPath));
-      state.problems = loaded;
-      state.sourceLabel = 'Local PC (browser-only, not uploaded): ' + rootLabel;
+      const byId = new Map(state.problems.map(p => [p.id, p]));
+      for (const item of loaded) {
+        const prev = byId.get(item.id);
+        if (prev && prev.pdfs) {
+          for (const url of Object.values(prev.pdfs)) {
+            if (typeof url === 'string' && url.startsWith('blob:')) URL.revokeObjectURL(url);
+          }
+        }
+        byId.set(item.id, item);
+      }
+      state.problems = Array.from(byId.values()).sort((a, b) => (a.relPath || a.name).localeCompare(b.relPath || b.name));
+      state.sourceLabel = `${state.problems.length} problem(s) loaded (+ ${rootLabel})`;
       document.getElementById('sourceLabel').textContent = state.sourceLabel;
       renderList();
       if (loaded[0]) selectProblem(loaded[0].id);
