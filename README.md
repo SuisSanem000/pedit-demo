@@ -46,7 +46,7 @@ bun run src/index.ts viewer --dir .. --port 3456
 bun run export ./dist-pages
 ```
 
-- **Live mode (`src/viewer-server.ts`):** Scans folder, auto-builds PDFs (`jtk make pdf` + Chrome fallback), and exposes **Rebuild PDF**, **`jtk make`**, **`jtk lint`**, and `Switch Server Folder`.
+- **Live mode (`src/viewer-server.ts`):** Scans folder, auto-builds PDFs (`jtk make pdf` + Chrome fallback), and exposes **Rebuild PDF**, **`jtk make`**, and **`jtk lint`**.
 - **Static mode (`src/export-static.ts`):** Exports `index.html`, `manifest.json`, PDFs, and sanitized `files.json` + local browser `.pbm` folder/drag-and-drop viewer.
 
 ## How to Verify & Test (For Professors)

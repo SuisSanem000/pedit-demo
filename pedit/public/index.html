@@ -132,7 +132,6 @@ bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
             <div class="group">
               <button class="btn primary" id="openLocalPbmBtn" type="button">Open .pbm from PC</button>
               <input id="localPbmPicker" type="file" webkitdirectory directory multiple hidden />
-              <button class="btn" id="openDirPathBtn" hidden>Switch Server Folder</button>
             </div>
             <small style="color:var(--muted);">Tip: Drag &amp; drop a <code>.pbm</code> folder here (nothing is uploaded).</small>
           </div>
@@ -213,7 +212,6 @@ bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
       document.getElementById('modeBadge').textContent = state.mode === 'server' ? 'Live Bun Server' : 'Static Pages';
 
       if (state.mode === 'server') {
-        document.getElementById('openDirPathBtn').hidden = false;
         document.getElementById('rebuildPdfBtn').hidden = false;
         document.getElementById('makeBtn').hidden = false;
         document.getElementById('lintBtn').hidden = false;
@@ -580,22 +578,6 @@ bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
       }
       await ingestPbmEntries(grouped, fileList[0].webkitRelativePath.split('/')[0] || 'folder');
     });
-
-    document.getElementById('openDirPathBtn').onclick = async () => {
-      const dir = prompt('Enter full path to a folder containing .pbm problems:', state.sourceLabel);
-      if (!dir) return;
-      const res = await fetch('/api/open-dir', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dir })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || 'Failed to open directory');
-        return;
-      }
-      applyLoadedData(data);
-    };
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
