@@ -179,17 +179,25 @@ async function main() {
       printResult(asJson, info);
       return;
     }
-    if (file === "problem.yml") {
-      console.error("Refusing to display problem.yml credentials.");
+    const normalized = file.replace(/\\/g, "/").replace(/^\/+/, "");
+    const full = resolve(pbmDir, normalized);
+    if (
+      !normalized ||
+      normalized.includes("..") ||
+      normalized.startsWith(".") ||
+      normalized === "problem.yml" ||
+      normalized.endsWith("/problem.yml") ||
+      !full.startsWith(resolve(pbmDir) + "/")
+    ) {
+      console.error(`Refusing unsafe or protected file: ${file}`);
       process.exit(1);
     }
-    const full = join(pbmDir, file);
     if (!existsSync(full)) {
       console.error(`File not found: ${full}`);
       process.exit(1);
     }
     const content = readFileSync(full, "utf8");
-    printResult(asJson, { file, content }, content);
+    printResult(asJson, { file: normalized, content }, content);
     return;
   }
 

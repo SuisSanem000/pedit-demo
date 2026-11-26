@@ -399,6 +399,7 @@
         <div class="cli-grid">
           <pre># After downloading pedit.tar.gz into ~/Downloads (or cloning the repo):
 cd ~/Downloads/pedit &amp;&amp; bun install
+bun link   # optional: installs `pedit` command globally
 export OPENROUTER_API_KEY="your-key"
 
 bun run src/index.ts --help
@@ -722,7 +723,9 @@ bun run src/index.ts viewer --dir ..</pre>
     async function runAction(action) {
       if (state.mode !== 'server' || !state.selected || state.selected.localFiles) return;
       state.lastLog = `Running jtk ${action}...`;
-      if (action === 'pdf' && state.tab === 'pdf') {
+      if (action === 'pdf') {
+        state.tab = 'pdf';
+        updateTabs();
         const rebuildUrl = currentPdfUrl(true);
         document.getElementById('contentArea').innerHTML = `<iframe src="${rebuildUrl}&t=${Date.now()}"></iframe>`;
         return;
@@ -753,25 +756,27 @@ bun run src/index.ts viewer --dir ..</pre>
         let title = pbmName.replace(/\.pbm$/, '');
 
         for (const { inner, file } of entries) {
-          if (inner === 'problem.yml' || inner.includes('/')) continue;
-          const pdfM = /^problem\.([a-z]{2})\.pdf$/.exec(inner);
+          if (inner === 'problem.yml' || inner.endsWith('/problem.yml')) continue;
+          if (inner.includes('/') && !/^[a-z]{2}\/[^/]+$/.test(inner)) continue;
+          const base = inner.split('/').pop();
+          const pdfM = /^problem\.([a-z]{2})\.pdf$/.exec(base);
           if (pdfM) {
             langs.add(pdfM[1]);
             pdfs[pdfM[1]] = URL.createObjectURL(file);
             continue;
           }
-          if (inner === 'problem.pdf' || inner === 'statement.pdf') {
+          if (base === 'problem.pdf' || base === 'statement.pdf') {
             if (!pdfs.en) pdfs.en = URL.createObjectURL(file);
             continue;
           }
-          const texM = /^problem\.([a-z]{2})\.tex$/.exec(inner);
+          const texM = /^problem\.([a-z]{2})\.tex$/.exec(base);
           if (texM) langs.add(texM[1]);
-          const ymlM = /^problem\.([a-z]{2})\.yml$/.exec(inner);
+          const ymlM = /^problem\.([a-z]{2})\.yml$/.exec(base);
           if (ymlM) langs.add(ymlM[1]);
 
-          if (/\.(tex|yml|cc|cpp|py|hs|clj|ts|inp|cor|ops|md)$/.test(inner)) {
+          if (/\.(tex|yml|cc|cpp|py|hs|clj|ts|inp|cor|ops|md)$/.test(base)) {
             const txt = await file.text();
-            localFiles[inner] = txt;
+            localFiles[base] = txt;
             if (ymlM) {
               const tM = /^title:\s*(.+)$/m.exec(txt);
               if (tM && (ymlM[1] === 'en' || title === pbmName.replace(/\.pbm$/, ''))) {
@@ -825,6 +830,15 @@ bun run src/index.ts viewer --dir ..</pre>
         dirHandle.name.endsWith('.pbm') ||
         directFiles.some(f => f.inner === 'handler.yml' || /^problem\.[a-z]{2}\.tex$/.test(f.inner));
       if (looksLikePbm) {
+        for (const sub of subDirs) {
+          if (/^[a-z]{2}$/.test(sub.name)) {
+            for await (const [subName, subHandle] of sub.entries()) {
+              if (subHandle.kind === 'file') {
+                directFiles.push({ inner: `${sub.name}/${subName}`, file: await subHandle.getFile() });
+              }
+            }
+          }
+        }
         grouped.set(curPath, directFiles);
         return;
       }
@@ -861,6 +875,25 @@ bun run src/index.ts viewer --dir ..</pre>
         entry.name.endsWith('.pbm') ||
         directFiles.some(f => f.inner === 'handler.yml' || /^problem\.[a-z]{2}\.tex$/.test(f.inner));
       if (looksLikePbm) {
+        for (const sub of subDirs) {
+          if (/^[a-z]{2}$/.test(sub.name)) {
+            const subReader = sub.createReader();
+            const subChildren = await new Promise((resolve) => {
+              const all = [];
+              const readBatch = () => subReader.readEntries((batch) => {
+                if (!batch.length) resolve(all);
+                else { all.push(...batch); readBatch(); }
+              }, () => resolve(all));
+              readBatch();
+            });
+            for (const sch of subChildren) {
+              if (sch.isFile) {
+                const file = await new Promise((res) => sch.file(res));
+                directFiles.push({ inner: `${sub.name}/${sch.name}`, file });
+              }
+            }
+          }
+        }
         grouped.set(curPath, directFiles);
         return;
       }
