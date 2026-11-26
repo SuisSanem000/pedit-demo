@@ -68,7 +68,9 @@
   <header>
     <h1><code>pedit</code> CLI &amp; Problem PDF Viewer <span class="badge" id="modeBadge">Loading...</span></h1>
     <div class="group">
-      <a class="btn primary" href="./pedit.tar.gz" download>Download pedit CLI (.tar.gz)</a>
+      <a class="btn primary" href="./pedit-macos-arm64" download>CLI (macOS arm64)</a>
+      <a class="btn primary" href="./pedit-linux-x64" download>CLI (Linux x64)</a>
+      <a class="btn" href="./pedit.tar.gz" download>Source (.tar.gz)</a>
       <a class="btn" href="#viewer">Jump to PDF Viewer</a>
     </div>
   </header>
@@ -80,19 +82,26 @@
           <h2><code>pedit</code> CLI — AI Problem Editor on Top of Unmodified <code>jtk</code></h2>
           <p>Uses OpenRouter (default <code>openai/gpt-4o-mini</code>), hidden Jutge specs/skills, and closed-loop <code>jtk</code> verification (never writes <code>*.cor</code>).</p>
         </div>
-        <a class="btn primary" href="./pedit.tar.gz" download>Download pedit.tar.gz</a>
+        <div class="group">
+          <a class="btn primary" href="./pedit-macos-arm64" download>macOS Binary</a>
+          <a class="btn primary" href="./pedit-linux-x64" download>Linux Binary</a>
+          <a class="btn" href="./pedit.tar.gz" download>Source</a>
+        </div>
       </div>
 
       <details>
         <summary>Install, Commands &amp; How pedit Differs from jtk</summary>
         <div class="cli-grid">
-          <pre>tar -xzf pedit.tar.gz &amp;&amp; cd pedit &amp;&amp; bun install
-export OPENROUTER_API_KEY="your-key"
+          <pre># Option A: Standalone binary (no bun install needed)
+chmod +x pedit-macos-arm64
+./pedit-macos-arm64 --help
+./pedit-macos-arm64 viewer --dir ..
 
-bun run src/index.ts list --dir .. --json
+# Option B: From source
+tar -xzf pedit.tar.gz &amp;&amp; cd pedit &amp;&amp; bun install
+export OPENROUTER_API_KEY="your-key"
 bun run src/index.ts create ./sum-evens.pbm "Sum of even numbers"
-bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests
-bun run src/index.ts viewer --dir ..</pre>
+bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
           <table>
             <thead><tr><th>Dimension</th><th><code>jtk</code> (Unchanged)</th><th><code>pedit</code> (New CLI)</th></tr></thead>
             <tbody>

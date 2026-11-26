@@ -1,20 +1,21 @@
-# `pedit` CLI & Problem PDF Viewer
-
 **Live GitHub Pages:** [pedit CLI & PDF Problem Viewer](https://suissanem000.github.io/pedit-demo/)
 
+# `pedit` CLI & Problem PDF Viewer
 
 ## Table of Contents
 
 - [What This Achieves](#what-this-achieves)
 - [1. `pedit` CLI](#1-pedit-cli)
 - [2. Problem PDF Viewer](#2-problem-pdf-viewer)
+- [How to Verify & Test (For Professors)](#how-to-verify--test-for-professors)
 - [Architecture](#architecture)
 
 ## What This Achieves
 
-- **Unified toolset:** Combines the AI-assisted `pedit` CLI and the Problem PDF Viewer in one folder (`pedit/`), wrapping unmodified `jtk` (`4.4.50`).
+- **Unified toolset:** Combines the AI problem-editor CLI and Problem PDF Viewer in `pedit/`, wrapping unmodified `jtk` (`4.4.50`).
+- **Standalone or source:** Run directly with `bun`, link globally (`bun link`), or compile into a standalone binary (`bun run compile`).
 - **Low-cost OpenRouter AI:** Uses `@openrouter/sdk` (default `openai/gpt-4o-mini`), hidden `spec/` & `skills/` prompts, and closed-loop `jtk` retries.
-- **Visual PDF review:** Lets teachers inspect compiled `.pbm` PDFs, LaTeX, solutions, and sample tests locally (`pedit viewer`) or on GitHub Pages (including **Open `.pbm` from PC**).
+- **Visual PDF review:** Inspect `.pbm` PDFs, LaTeX, solutions, and samples locally (`pedit viewer`) or on GitHub Pages (with drag-and-drop / **Open `.pbm` from PC**).
 
 ## 1. `pedit` CLI
 
@@ -46,7 +47,37 @@ bun run export ./dist-pages
 ```
 
 - **Live mode (`src/viewer-server.ts`):** Scans folder, auto-builds PDFs (`jtk make pdf` + Chrome fallback), and exposes **Rebuild PDF**, **`jtk make`**, **`jtk lint`**, and `Switch Server Folder`.
-- **Static mode (`src/export-static.ts`):** Exports `index.html`, `manifest.json`, PDFs, and sanitized `files.json` + client-side **Open `.pbm` from PC**.
+- **Static mode (`src/export-static.ts`):** Exports `index.html`, `manifest.json`, PDFs, and sanitized `files.json` + local browser `.pbm` folder/drag-and-drop viewer.
+
+## How to Verify & Test (For Professors)
+
+Run these checks in order to verify every part works deterministically:
+
+```bash
+cd pedit && bun install
+
+# 1. Unit tests (write guards blocking *.cor/problem.yml, YAML edits, .pbm discovery)
+bun test
+
+# 2. Standalone binary build & smoke check
+bun run compile
+./pedit --help
+./pedit list --dir .. --json
+
+# 3. Verify unmodified jtk integration on a demo problem
+./pedit build ../demo-problems/sum-evens.pbm --json
+./pedit lint ../demo-problems/sum-evens.pbm --json
+
+# 4. Live AI closed-loop test (requires OPENROUTER_API_KEY)
+./pedit create /tmp/test-sum.pbm "Read two integers a and b and print a+b." --json
+./pedit edit /tmp/test-sum.pbm --preset add-edge-tests --json
+rm -rf /tmp/test-sum.pbm
+
+# 5. Live PDF Problem Viewer (open http://localhost:3456 in browser)
+./pedit viewer --dir .. --port 3456
+```
+
+- Note: In `pedit-demo` (public demo mirror), replace `../demo-problems/sum-evens.pbm` with `../demo-problems/sum-evens.pbm`.
 
 ## Architecture
 

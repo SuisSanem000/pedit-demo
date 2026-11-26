@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import indexHtml from "../public/index.html" with { type: "text" };
 import { jtkLint, jtkMake, jtkVerify } from "./jtk.ts";
 import { discoverProblems, inspectProblem, readProblemContext } from "./pbm.ts";
 import { buildProblemPdfs } from "./pdf.ts";
@@ -8,7 +9,6 @@ import { buildProblemPdfs } from "./pdf.ts";
 export function startViewerServer(opts?: { port?: number; rootDir?: string }) {
   const port = opts?.port ?? Number(process.env.PORT || 3456);
   let rootDir = resolve(opts?.rootDir || process.env.PEDIT_PROBLEMS_DIR || join(import.meta.dir, "../.."));
-  const indexHtmlPath = join(import.meta.dir, "..", "public", "index.html");
 
   function json(data: unknown, status = 200): Response {
     return new Response(JSON.stringify(data, null, 2), {
@@ -29,7 +29,7 @@ export function startViewerServer(opts?: { port?: number; rootDir?: string }) {
       const includePrivate = url.searchParams.get("private") === "1";
 
       if (pathname === "/" || pathname === "/index.html") {
-        return new Response(readFileSync(indexHtmlPath, "utf8"), {
+        return new Response(indexHtml, {
           headers: { "Content-Type": "text/html; charset=utf-8" },
         });
       }
