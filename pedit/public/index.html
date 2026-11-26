@@ -121,10 +121,8 @@ bun run src/index.ts viewer --dir ..</pre>
               <div class="source-path" id="sourceLabel">-</div>
             </div>
             <div class="group">
-              <label class="btn primary">
-                Open .pbm from PC
-                <input id="localPbmPicker" type="file" webkitdirectory directory multiple hidden />
-              </label>
+              <button class="btn primary" id="openLocalPbmBtn" type="button">Open .pbm from PC</button>
+              <input id="localPbmPicker" type="file" webkitdirectory directory multiple hidden />
               <button class="btn" id="openDirPathBtn" hidden>Switch Server Folder</button>
             </div>
           </div>
@@ -397,22 +395,7 @@ bun run src/index.ts viewer --dir ..</pre>
       renderContent();
     }
 
-    document.getElementById('localPbmPicker').addEventListener('change', async (e) => {
-      const fileList = Array.from(e.target.files || []);
-      if (!fileList.length) return;
-
-      const grouped = new Map();
-      for (const f of fileList) {
-        const rel = f.webkitRelativePath || f.name;
-        const parts = rel.split('/');
-        const pbmIdx = parts.findIndex(seg => seg.endsWith('.pbm'));
-        if (pbmIdx === -1) continue;
-        const pbmRel = parts.slice(0, pbmIdx + 1).join('/');
-        const inner = parts.slice(pbmIdx + 1).join('/');
-        if (!grouped.has(pbmRel)) grouped.set(pbmRel, []);
-        grouped.get(pbmRel).push({ inner, file: f });
-      }
-
+    async function ingestPbmEntries(grouped, rootLabel) {
       if (!grouped.size) {
         alert('No .pbm folder found inside the selected directory.');
         return;
@@ -464,10 +447,64 @@ bun run src/index.ts viewer --dir ..</pre>
 
       loaded.sort((a, b) => a.relPath.localeCompare(b.relPath));
       state.problems = loaded;
-      state.sourceLabel = 'Local PC selection (' + (fileList[0].webkitRelativePath.split('/')[0] || 'folder') + ')';
+      state.sourceLabel = 'Local PC (browser-only, not uploaded): ' + rootLabel;
       document.getElementById('sourceLabel').textContent = state.sourceLabel;
       renderList();
       if (loaded[0]) selectProblem(loaded[0].id);
+    }
+
+    async function collectFromDirectoryHandle(dirHandle, prefix, grouped, depth = 0) {
+      if (depth > 4) return;
+      const curPath = prefix ? `${prefix}/${dirHandle.name}` : dirHandle.name;
+      if (dirHandle.name.endsWith('.pbm')) {
+        const entries = [];
+        for await (const [name, handle] of dirHandle.entries()) {
+          if (handle.kind === 'file') {
+            entries.push({ inner: name, file: await handle.getFile() });
+          }
+        }
+        grouped.set(curPath, entries);
+        return;
+      }
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind === 'directory' && !name.startsWith('.') && name !== 'node_modules' && name !== 'private-problems') {
+          await collectFromDirectoryHandle(handle, curPath, grouped, depth + 1);
+        }
+      }
+    }
+
+    document.getElementById('openLocalPbmBtn').addEventListener('click', async () => {
+      if (typeof window.showDirectoryPicker === 'function') {
+        try {
+          const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+          const grouped = new Map();
+          await collectFromDirectoryHandle(dirHandle, '', grouped);
+          await ingestPbmEntries(grouped, dirHandle.name);
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+          document.getElementById('localPbmPicker').click();
+        }
+      } else {
+        document.getElementById('localPbmPicker').click();
+      }
+    });
+
+    document.getElementById('localPbmPicker').addEventListener('change', async (e) => {
+      const fileList = Array.from(e.target.files || []);
+      if (!fileList.length) return;
+
+      const grouped = new Map();
+      for (const f of fileList) {
+        const rel = f.webkitRelativePath || f.name;
+        const parts = rel.split('/');
+        const pbmIdx = parts.findIndex(seg => seg.endsWith('.pbm'));
+        if (pbmIdx === -1) continue;
+        const pbmRel = parts.slice(0, pbmIdx + 1).join('/');
+        const inner = parts.slice(pbmIdx + 1).join('/');
+        if (!grouped.has(pbmRel)) grouped.set(pbmRel, []);
+        grouped.get(pbmRel).push({ inner, file: f });
+      }
+      await ingestPbmEntries(grouped, fileList[0].webkitRelativePath.split('/')[0] || 'folder');
     });
 
     document.getElementById('openDirPathBtn').onclick = async () => {
