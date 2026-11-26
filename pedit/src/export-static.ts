@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import { discoverProblems, readProblemContext } from "../pedit/src/pbm.ts";
+import { discoverProblems, readProblemContext } from "./pbm.ts";
 
-const outDir = resolve(process.argv[2] || join(import.meta.dir, "dist"));
-const rootDir = resolve(process.env.PEDIT_PROBLEMS_DIR || join(import.meta.dir, ".."));
-const indexHtmlPath = join(import.meta.dir, "public", "index.html");
+const outDir = resolve(process.argv[2] || join(import.meta.dir, "..", "dist-pages"));
+const rootDir = resolve(process.env.PEDIT_PROBLEMS_DIR || join(import.meta.dir, "../.."));
+const indexHtmlPath = join(import.meta.dir, "..", "public", "index.html");
 
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(join(outDir, "problems"), { recursive: true });
@@ -60,7 +60,6 @@ for (const p of problems) {
   });
 }
 
-// Copy top-level exam PDFs if present in generated-exam-sample/
 const examDir = join(rootDir, "generated-exam-sample");
 const extraPdfs: Array<{ label: string; url: string }> = [];
 if (existsSync(examDir)) {
@@ -77,7 +76,7 @@ writeFileSync(
   JSON.stringify(
     {
       mode: "static",
-      sourceLabel: "problem-editor/ (generated-demo/, generated-exam-sample/, spec/models/)",
+      sourceLabel: basename(rootDir) + "/",
       generatedAt: new Date().toISOString(),
       problems: manifestProblems,
       extraPdfs,
@@ -89,5 +88,5 @@ writeFileSync(
 );
 
 console.log(
-  `Exported static PDF viewer to ${outDir} (${manifestProblems.length} problems, ${extraPdfs.length} exam PDFs).`,
+  `Exported unified static site to ${outDir} (${manifestProblems.length} problems, ${extraPdfs.length} exam PDFs).`,
 );

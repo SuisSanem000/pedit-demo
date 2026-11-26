@@ -1,58 +1,57 @@
-# `pedit` CLI
+# `pedit` CLI & Problem PDF Viewer
 
 ## Table of Contents
 
 - [What This Achieves](#what-this-achieves)
-- [Install & Run](#install--run)
-- [Commands](#commands)
-- [How `pedit` Differs from `jtk`](#how-pedit-differs-from-jtk)
+- [1. `pedit` CLI](#1-pedit-cli)
+- [2. Problem PDF Viewer](#2-problem-pdf-viewer)
 - [Architecture](#architecture)
 
 ## What This Achieves
 
-- **Keeps `jtk` unchanged:** Wraps `jtk` (`4.4.50`) as the deterministic build, test, and lint engine with `--json` output.
-- **Selectable low-cost AI:** Uses `@openrouter/sdk` (default `openai/gpt-4o-mini`; supports `google/gemini-2.5-flash-lite` and `deepseek/deepseek-chat-v3-0324`).
-- **Hidden master prompts:** Loads `spec/constitucio.md`, `spec/problema-jutge.md`, and `skills/problemes-jutge/SKILL.md` automatically so users only type short ideas or edit requests.
-- **Closed-loop safety:** Blocks LLM writes to `*.cor` and `problem.yml`; runs `generate.ts`, `jtk make`, PDF build, and `jtk lint` with up to 2 automatic retries.
+- **Unified toolset:** Combines the AI-assisted `pedit` CLI and the Problem PDF Viewer in one folder (`pedit/`), wrapping unmodified `jtk` (`4.4.50`).
+- **Low-cost OpenRouter AI:** Uses `@openrouter/sdk` (default `openai/gpt-4o-mini`), hidden `spec/` & `skills/` prompts, and closed-loop `jtk` retries.
+- **Visual PDF review:** Lets teachers inspect compiled `.pbm` PDFs, LaTeX, solutions, and sample tests locally (`pedit viewer`) or on GitHub Pages (including **Open `.pbm` from PC**).
 
-## Install & Run
+## 1. `pedit` CLI
 
 ```bash
-cd pedit
-bun install
+cd pedit && bun install
 export OPENROUTER_API_KEY="your-key"   # or ANTHROPIC_AUTH_TOKEN when routed via OpenRouter
-bun run src/index.ts --help
+
+bun run src/index.ts list --dir .. --json
+bun run src/index.ts status <problem.pbm> --json
+bun run src/index.ts build|pdf|lint|verify|clean <problem.pbm>
+bun run src/index.ts create <dir.pbm> "<idea>"
+bun run src/index.ts edit <dir.pbm> ["<request>"] [--preset add-edge-tests]
+bun run src/index.ts chat <dir.pbm>
 ```
 
-## Commands
-
-| Group | Command | Purpose |
+| Dimension | `jtk` (Unchanged) | `pedit` (Unified Tool) |
 |---|---|---|
-| **Inspect** | `pedit list [--dir ..] [--json]` | Find `.pbm` folders (excludes `private-problems/` by default) |
-| **Inspect** | `pedit status <pbm>` / `pedit show <pbm> [file]` | Inspect languages, PDFs, tests, or file contents |
-| **Build (`jtk`)** | `pedit build` / `pdf` / `lint` / `verify` / `clean <pbm>` | Run unmodified `jtk` commands and return JSON |
-| **Direct Edit** | `pedit meta <pbm> --lang en --title "..."` | Update `problem.<lang>.yml` without AI |
-| **Direct Edit** | `pedit handler <pbm> --compilers G++17` | Update `handler.yml` without AI |
-| **AI Authoring** | `pedit create <dir.pbm> "<idea>"` | Generate `.pbm` problem + verify in closed loop |
-| **AI Editing** | `pedit edit <pbm> ["<req>"] [--preset <name>]` | Edit `.pbm` via OpenRouter + preset shortcuts |
-| **Interactive** | `pedit chat <pbm>` | Multi-turn terminal editing loop |
-| **Discovery** | `pedit models` / `pedit presets` | List low-cost models and edit presets |
+| **Role** | Deterministic build, test, PDF, lint, upload | AI authoring, editing & PDF viewer |
+| **Model** | Fixed Jutge API (`openai/gpt-6-luna`) | OpenRouter SDK (default `openai/gpt-4o-mini`) |
+| **Prompts** | Hardcoded | Hidden `spec/` & `skills/` |
+| **Loop** | One-shot | Closed-loop `jtk` retries (blocks `*.cor`/`problem.yml` writes) |
 
-## How `pedit` Differs from `jtk`
+## 2. Problem PDF Viewer
 
-| Dimension | `jtk` (Existing) | `pedit` (New CLI) |
-|---|---|---|
-| **Primary Role** | Deterministic build, test, PDF, lint, upload | AI-assisted problem authoring & editing |
-| **LLM Provider** | Fixed Jutge API (`openai/gpt-6-luna`) | OpenRouter SDK (default `openai/gpt-4o-mini`; Jutge API later) |
-| **Workflow** | One-shot `jtk generate` | Conversational `edit` / `chat` + edit presets |
-| **Prompts / Rules** | Hardcoded in CLI | Hidden master prompts loaded from `spec/` & `skills/` |
-| **Verification** | Manual | Closed-loop (`jtk` runs automatically with retries) |
+```bash
+bun run src/index.ts viewer --dir .. --port 3456
+# Or export static GitHub Pages bundle:
+bun run export ./dist-pages
+```
+
+- **Live mode (`src/viewer-server.ts`):** Scans folder, auto-builds PDFs (`jtk make pdf` + Chrome fallback), and exposes **Rebuild PDF**, **`jtk make`**, **`jtk lint`**, and `Switch Server Folder`.
+- **Static mode (`src/export-static.ts`):** Exports `index.html`, `manifest.json`, PDFs, and sanitized `files.json` + client-side **Open `.pbm` from PC**.
 
 ## Architecture
 
-- `src/index.ts`: CLI flag parser and command router.
-- `src/jtk.ts`: Subprocess runner with timeouts for `jtk` and `bun run generate.ts`.
-- `src/pbm.ts`: `.pbm` scanner, YAML editors, and write guard (`assertSafeRelativePath`).
-- `src/pdf.ts`: `jtk make pdf` runner + headless Chrome HTML-to-PDF fallback.
-- `src/ai.ts`: `@openrouter/sdk` client, preset prompts, and closed-loop retry runner.
-- `tests/pedit.test.ts`: Unit tests (`bun test`).
+- `src/index.ts` — CLI router (`list`, `status`, `show`, `build`, `pdf`, `lint`, `verify`, `clean`, `meta`, `handler`, `models`, `presets`, `create`, `edit`, `chat`, `viewer`).
+- `src/jtk.ts` — Subprocess wrapper for `jtk` and `bun run generate.ts`.
+- `src/pbm.ts` — `.pbm` scanner, YAML updaters, and write guard (`assertSafeRelativePath`).
+- `src/pdf.ts` — `jtk make pdf` runner + headless Chrome HTML-to-PDF fallback.
+- `src/ai.ts` — `@openrouter/sdk` client and closed-loop retry engine.
+- `src/viewer-server.ts` & `src/export-static.ts` — Local server and static Pages exporter.
+- `public/index.html` — Unified single-page UI (CLI at top, PDF Viewer below).
+- `tests/pedit.test.ts` — Unit tests (`bun test`).

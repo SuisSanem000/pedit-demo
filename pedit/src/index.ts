@@ -5,6 +5,7 @@ import { createInterface } from "node:readline/promises";
 import { CHEAP_MODELS, DEFAULT_MODEL, EDIT_PRESETS, runClosedLoopAi } from "./ai.ts";
 import { jtkClean, jtkLint, jtkMake, jtkVerify, runGenerator } from "./jtk.ts";
 import { buildProblemPdfs } from "./pdf.ts";
+import { startViewerServer } from "./viewer-server.ts";
 import {
   discoverProblems,
   inspectProblem,
@@ -87,7 +88,10 @@ AI commands (OpenRouter SDK, closed-loop with jtk):
   pedit presets [--json]                 List suggested edit presets
   pedit create <dir.pbm> "<idea>" [--model <id>] [--json]
   pedit edit <dir.pbm> ["<instruction>"] [--preset <name>] [--model <id>] [--json]
-  pedit chat <dir.pbm> [--model <id>]    Interactive editing loop`;
+  pedit chat <dir.pbm> [--model <id>]    Interactive editing loop
+
+Web PDF Viewer:
+  pedit viewer [--dir <path>] [--port 3456]  Start local PDF Problem Viewer server`;
 }
 
 async function main() {
@@ -117,6 +121,13 @@ async function main() {
         .map(([k, v]) => `- ${k}: ${v}`)
         .join("\n"),
     );
+    return;
+  }
+
+  if (cmd === "viewer") {
+    const dir = typeof flags.dir === "string" ? resolve(flags.dir) : undefined;
+    const port = typeof flags.port === "string" ? Number(flags.port) : undefined;
+    startViewerServer({ port, rootDir: dir });
     return;
   }
 
