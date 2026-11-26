@@ -91,18 +91,17 @@
       </div>
 
       <details>
-        <summary>Install, Commands &amp; How pedit Differs from jtk</summary>
+        <summary>Quickstart Commands (macOS / Linux / Source)</summary>
         <div class="cli-grid">
-          <pre># Option A: Standalone binary (no bun install needed)
-chmod +x pedit-macos-arm64
-./pedit-macos-arm64 --help
-./pedit-macos-arm64 viewer --dir ..
+          <pre># 1. Standalone binary (macOS Apple Silicon, no Bun needed)
+curl -fsSL https://suissanem000.github.io/pedit-demo/pedit-macos-arm64 -o pedit &amp;&amp; chmod +x pedit
+./pedit --help
+./pedit viewer --dir .
 
-# Option B: From source
-tar -xzf pedit.tar.gz &amp;&amp; cd pedit &amp;&amp; bun install
-export OPENROUTER_API_KEY="your-key"
-bun run src/index.ts create ./sum-evens.pbm "Sum of even numbers"
-bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
+# 2. Or run from downloaded Source (~/Downloads/pedit)
+cd ~/Downloads/pedit &amp;&amp; bun install
+bun run src/index.ts --help
+bun run src/index.ts viewer --dir ..</pre>
           <table>
             <thead><tr><th>Dimension</th><th><code>jtk</code> (Unchanged)</th><th><code>pedit</code> (New CLI)</th></tr></thead>
             <tbody>
@@ -162,7 +161,7 @@ bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
             <button class="tab" data-tab="solution">Solution</button>
             <button class="tab" data-tab="tests">Samples</button>
             <button class="tab" data-tab="handler">Handler &amp; Meta</button>
-            <button class="tab" data-tab="log">Logs</button>
+            <button class="tab" data-tab="log" id="logTabBtn" hidden>Logs</button>
           </div>
 
           <div class="content" id="contentArea">
@@ -286,6 +285,7 @@ bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
       document.getElementById('rebuildPdfBtn').hidden = !isLiveServerItem;
       document.getElementById('makeBtn').hidden = !isLiveServerItem;
       document.getElementById('lintBtn').hidden = !isLiveServerItem;
+      document.getElementById('logTabBtn').hidden = !isLiveServerItem;
       const langsEl = document.getElementById('langButtons');
       langsEl.innerHTML = '';
       for (const l of p.languages) {
@@ -349,7 +349,9 @@ bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests</pre>
 
       if (state.tab === 'pdf') {
         if (!pdfUrl) {
-          area.innerHTML = `<div class="empty">No precompiled PDF found for this problem (${escapeHtml(state.lang || 'en')}).${state.mode === 'server' && !p.localFiles ? ' Click <strong>Rebuild PDF</strong> to compile via <code>jtk make pdf</code>.' : ' Run <code>pedit pdf &lt;problem.pbm&gt;</code> locally to generate its PDF, or inspect the LaTeX / Solution / Samples tabs above.'}</div>`;
+          area.innerHTML = `<div class="empty">No precompiled PDF found in this folder (${escapeHtml(state.lang || 'en')}).${state.mode === 'server' && !p.localFiles ? ' Click <strong>Rebuild PDF</strong> to compile via <code>jtk make pdf</code>.' : ' Run <code>pedit pdf &lt;problem.pbm&gt;</code> locally to build its PDF.'}<div style="margin-top:0.75rem;"><button class="btn primary" type="button" id="switchToTexBtn">View LaTeX Statement</button></div></div>`;
+          const btn = document.getElementById('switchToTexBtn');
+          if (btn) btn.onclick = () => { state.tab = 'tex'; renderContent(); };
         } else {
           area.innerHTML = `<iframe src="${pdfUrl}"></iframe>`;
         }
