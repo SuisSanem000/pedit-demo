@@ -452,6 +452,7 @@ bun run src/index.ts viewer --dir .. --port 3456</pre>
             </div>
             <div class="group">
               <button class="btn primary" id="openLocalPbmBtn" type="button">Open .pbm from PC</button>
+              <button class="btn" id="clearLocalPbmBtn" type="button" hidden>Clear</button>
               <input id="localPbmPicker" type="file" webkitdirectory directory multiple hidden />
             </div>
             <small style="color:var(--muted);">Tip: Drag &amp; drop a <code>.pbm</code> folder here (nothing is
@@ -527,10 +528,56 @@ bun run src/index.ts viewer --dir .. --port 3456</pre>
       applyLoadedData(data);
     }
 
+    const LOCAL_STORAGE_KEY = 'pedit_saved_local_problems_v1';
+
+    function saveLocalProblemsToStorage() {
+      try {
+        const locals = state.problems
+          .filter(p => p.localFiles)
+          .map(p => ({
+            id: p.id,
+            name: p.name,
+            relPath: p.relPath,
+            title: p.title,
+            languages: p.languages,
+            pdfs: {},
+            localFiles: p.localFiles
+          }));
+        if (locals.length) {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(locals));
+        } else {
+          localStorage.removeItem(LOCAL_STORAGE_KEY);
+        }
+      } catch { }
+    }
+
+    function loadLocalProblemsFromStorage() {
+      try {
+        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function updateClearButton() {
+      const btn = document.getElementById('clearLocalPbmBtn');
+      if (btn) btn.hidden = !state.problems.some(p => p.localFiles);
+    }
+
     function applyLoadedData(data) {
-      state.problems = data.problems || [];
+      state.baseProblems = data.problems || [];
+      state.baseSourceLabel = data.sourceLabel || data.root || 'demo-problems/';
+      const savedLocals = loadLocalProblemsFromStorage();
+      const byId = new Map(state.baseProblems.map(p => [p.id, p]));
+      for (const item of savedLocals) byId.set(item.id, item);
+      state.problems = Array.from(byId.values());
       state.extraPdfs = data.extraPdfs || [];
-      state.sourceLabel = data.sourceLabel || data.root || 'demo-problems/';
+      state.sourceLabel = savedLocals.length
+        ? `${state.problems.length} problem(s) loaded (saved locally)`
+        : state.baseSourceLabel;
       document.getElementById('sourceLabel').textContent = state.sourceLabel;
       document.getElementById('modeBadge').textContent = state.mode === 'server' ? 'Live Bun Server' : 'Static Pages';
 
@@ -540,10 +587,12 @@ bun run src/index.ts viewer --dir .. --port 3456</pre>
         document.getElementById('lintBtn').hidden = false;
       }
 
+      updateClearButton();
       renderExtras();
       renderList();
 
-      const firstWithPdf = state.problems.find(p => Object.keys(p.pdfs || {}).length > 0) || state.problems[0];
+      const firstLocal = savedLocals[0];
+      const firstWithPdf = firstLocal || state.problems.find(p => Object.keys(p.pdfs || {}).length > 0) || state.problems[0];
       if (firstWithPdf) selectProblem(firstWithPdf.id);
     }
 
@@ -968,6 +1017,8 @@ bun run src/index.ts viewer --dir .. --port 3456</pre>
       state.problems = Array.from(byId.values()).sort((a, b) => (a.relPath || a.name).localeCompare(b.relPath || b.name));
       state.sourceLabel = `${state.problems.length} problem(s) loaded (+ ${rootLabel})`;
       document.getElementById('sourceLabel').textContent = state.sourceLabel;
+      saveLocalProblemsToStorage();
+      updateClearButton();
       renderList();
       if (loaded[0]) selectProblem(loaded[0].id);
     }
@@ -1084,6 +1135,29 @@ bun run src/index.ts viewer --dir .. --port 3456</pre>
       }
     });
 
+    document.getElementById('clearLocalPbmBtn').addEventListener('click', () => {
+      for (const p of state.problems) {
+        if (p.localFiles && p.pdfs) {
+          for (const url of Object.values(p.pdfs)) {
+            if (typeof url === 'string' && url.startsWith('blob:')) URL.revokeObjectURL(url);
+          }
+        }
+      }
+      try { localStorage.removeItem(LOCAL_STORAGE_KEY); } catch { }
+      state.problems = [...(state.baseProblems || [])];
+      state.sourceLabel = state.baseSourceLabel || 'demo-problems/';
+      document.getElementById('sourceLabel').textContent = state.sourceLabel;
+      updateClearButton();
+      renderList();
+      if (state.problems[0]) {
+        selectProblem(state.problems[0].id);
+      } else {
+        state.selected = null;
+        document.getElementById('selectedTitle').textContent = 'Select a problem';
+        document.getElementById('contentArea').innerHTML = '<div class="empty">Select a problem from the left list.</div>';
+      }
+    });
+
     document.getElementById('openLocalPbmBtn').addEventListener('click', async () => {
       if (typeof window.showDirectoryPicker === 'function') {
         try {
@@ -1092,8 +1166,8 @@ bun run src/index.ts viewer --dir .. --port 3456</pre>
           await collectFromDirectoryHandle(dirHandle, '', grouped);
           await ingestPbmEntries(grouped, dirHandle.name);
         } catch (err) {
-          if (err && err.name === 'AbortError') return;
-          alert('Could not read folder: ' + (err?.message || err));
+          if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
+          document.getElementById('localPbmPicker').click();
         }
       } else {
         document.getElementById('localPbmPicker').click();
