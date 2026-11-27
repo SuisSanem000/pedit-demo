@@ -36,20 +36,22 @@
 
 ### Usage & Use Cases
 
+**1. Setup & non-AI commands (work immediately, no API key needed):**
+
 ```bash
-cd pedit && bun install
-bun link   # optional: enables `pedit ...` globally
-export OPENROUTER_API_KEY="your-key"   # or ANTHROPIC_AUTH_TOKEN via OpenRouter
+cd ~/Downloads/pedit && bun install
+bun run src/index.ts --help
+bun run src/index.ts list --dir .. --json
+bun run src/index.ts viewer --dir .. --port 3456
+```
 
-# Use case 1: Author a new problem from a short idea (verified with jtk make + jtk lint)
+**2. AI problem authoring & editing (requires a real `OPENROUTER_API_KEY`):**
+
+```bash
+export OPENROUTER_API_KEY="<your-openrouter-key>"
 bun run src/index.ts create ./sum-evens.pbm "Read N and N integers, print sum of evens"
-
-# Use case 2: Add edge-case tests or translate an existing problem
 bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests
 bun run src/index.ts edit ./sum-evens.pbm --preset translate-es
-
-# Use case 3: Inspect & preview PDFs locally in the browser
-bun run src/index.ts viewer --dir .. --port 3456
 ```
 
 ### Differences from `jtk`
@@ -75,27 +77,22 @@ bun run export ./dist-pages
 ## How to Verify & Test (For Professors)
 
 ```bash
-cd pedit && bun install
-
-# 1. Unit tests (write guards blocking *.cor/problem.yml, YAML edits, .pbm discovery)
+cd ~/Downloads/pedit && bun install
 bun test
-
-# 2. CLI inspect & show safety check
 bun run src/index.ts --help
 bun run src/index.ts list --dir .. --json
 bun run src/index.ts show ../demo-problems/sum-evens.pbm problem.en.tex
-
-# 3. Verify unmodified jtk integration on a demo problem
 bun run src/index.ts build ../demo-problems/sum-evens.pbm --json
 bun run src/index.ts lint ../demo-problems/sum-evens.pbm --json
+bun run src/index.ts viewer --dir .. --port 3456
+```
 
-# 4. Live AI closed-loop test (requires OPENROUTER_API_KEY)
+With `OPENROUTER_API_KEY` set, you can also test live AI closed-loop creation & editing:
+
+```bash
 bun run src/index.ts create /tmp/test-sum.pbm "Read two integers a and b and print a+b." --json
 bun run src/index.ts edit /tmp/test-sum.pbm --preset add-edge-tests --json
 rm -rf /tmp/test-sum.pbm
-
-# 5. Live PDF Problem Viewer (open http://localhost:3456 in browser)
-bun run src/index.ts viewer --dir .. --port 3456
 ```
 
 - Note: In `pedit-demo` (public demo mirror), replace `../demo-problems/sum-evens.pbm` with `../demo-problems/sum-evens.pbm`.

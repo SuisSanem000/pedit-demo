@@ -141,9 +141,9 @@ async function callOpenRouter(
   userPrompt: string,
 ): Promise<AiEditResponse> {
   const apiKey = findEnvKey();
-  if (!apiKey) {
+  if (!apiKey || /^your[-_]?key/i.test(apiKey.trim())) {
     throw new Error(
-      "OPENROUTER_API_KEY is not set. Export it in your shell or add it to a gitignored .env file.",
+      'OPENROUTER_API_KEY is not set (or still uses a placeholder). Run export OPENROUTER_API_KEY="sk-or-..." or add it to .env. Non-AI commands (list, status, show, build, pdf, lint, viewer) work without a key.',
     );
   }
   const client = new OpenRouter({ apiKey });

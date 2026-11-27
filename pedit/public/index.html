@@ -397,16 +397,10 @@
       <details>
         <summary>Quickstart Commands (CLI + Local Viewer)</summary>
         <div class="cli-grid">
-          <pre># After downloading pedit.tar.gz into ~/Downloads (or cloning the repo):
-cd ~/Downloads/pedit &amp;&amp; bun install
-bun link   # optional: installs `pedit` command globally
-export OPENROUTER_API_KEY="your-key"
-
+          <pre>cd ~/Downloads/pedit &amp;&amp; bun install
 bun run src/index.ts --help
 bun run src/index.ts list --dir .. --json
-bun run src/index.ts create ./sum-evens.pbm "Sum of even numbers"
-bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests
-bun run src/index.ts viewer --dir ..</pre>
+bun run src/index.ts viewer --dir .. --port 3456</pre>
           <table>
             <thead>
               <tr>
