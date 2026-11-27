@@ -6,28 +6,51 @@
 - [1. `pedit` CLI](#1-pedit-cli)
 - [2. Problem PDF Viewer](#2-problem-pdf-viewer)
 - [How to Verify & Test (For Professors)](#how-to-verify--test-for-professors)
-- [Architecture](#architecture)
+- [Technical Details](#technical-details)
 
 ## What This Achieves
 
 - **Unified toolset:** Combines the AI problem-editor CLI and Problem PDF Viewer in `pedit/`, wrapping unmodified `jtk` (`4.4.50`).
-- **Run with Bun or link globally:** Run directly with `bun run src/index.ts ...` or link globally with `bun link` (`pedit ...`).
-- **Low-cost OpenRouter AI:** Uses `@openrouter/sdk` (default `openai/gpt-4o-mini`), hidden `spec/` & `skills/` prompts, and closed-loop `jtk` retries.
-- **Visual PDF review:** Inspect `.pbm` PDFs, LaTeX, solutions, and samples locally (`pedit viewer`) or on GitHub Pages (with drag-and-drop / **Open `.pbm` from PC**).
+- **Low-cost OpenRouter AI:** Uses `@openrouter/sdk` (default `openai/gpt-4o-mini`), hidden `spec/` & `skills/` prompts, and closed-loop `jtk` retries (never writes `*.cor`).
+- **Visual PDF review:** Inspect `.pbm` PDFs, LaTeX, solutions, and samples locally (`pedit viewer`) or on GitHub Pages (browser-only **Open `.pbm` from PC** / drag-and-drop).
 
 ## 1. `pedit` CLI
 
+### All CLI Commands
+
+| Category | Command | Purpose |
+|---|---|---|
+| **Inspect** | `pedit list [--dir <path>] [--include-private] [--json]` | Discover `.pbm` folders |
+| **Inspect** | `pedit status <problem.pbm> [--json]` | Summarize languages, PDFs, solutions, tests |
+| **Inspect** | `pedit show <problem.pbm> [file] [--json]` | Print problem summary or file (blocks `problem.yml`) |
+| **Deterministic `jtk`** | `pedit build\|pdf\|lint\|verify\|clean <problem.pbm> [--json]` | Run `generate.ts` + unmodified `jtk` |
+| **Deterministic edits** | `pedit meta <problem.pbm> --lang en [--title "..."] [--author "..."]` | Update `problem.<lang>.yml` without AI |
+| **Deterministic edits** | `pedit handler <problem.pbm> [--handler std] [--compilers G++17]` | Update `handler.yml` without AI |
+| **AI authoring** | `pedit models [--json]` • `pedit presets [--json]` | List cheap OpenRouter models & edit presets |
+| **AI authoring** | `pedit create <dir.pbm> "<idea>" [--model <id>] [--json]` | Create + build + lint new `.pbm` |
+| **AI authoring** | `pedit edit <dir.pbm> ["<req>"] [--preset <name>] [--json]` | Edit + rebuild + lint existing `.pbm` |
+| **AI authoring** | `pedit chat <dir.pbm> [--model <id>]` | Interactive multi-turn editing loop |
+| **Web Viewer** | `pedit viewer [--dir <path>] [--port 3456]` | Start local PDF Problem Viewer server |
+
+### Usage & Use Cases
+
 ```bash
 cd pedit && bun install
-export OPENROUTER_API_KEY="your-key"   # or ANTHROPIC_AUTH_TOKEN when routed via OpenRouter
+bun link   # optional: enables `pedit ...` globally
+export OPENROUTER_API_KEY="your-key"   # or ANTHROPIC_AUTH_TOKEN via OpenRouter
 
-bun run src/index.ts list --dir .. --json
-bun run src/index.ts status <problem.pbm> --json
-bun run src/index.ts build|pdf|lint|verify|clean <problem.pbm>
-bun run src/index.ts create <dir.pbm> "<idea>"
-bun run src/index.ts edit <dir.pbm> ["<request>"] [--preset add-edge-tests]
-bun run src/index.ts chat <dir.pbm>
+# Use case 1: Author a new problem from a short idea (verified with jtk make + jtk lint)
+bun run src/index.ts create ./sum-evens.pbm "Read N and N integers, print sum of evens"
+
+# Use case 2: Add edge-case tests or translate an existing problem
+bun run src/index.ts edit ./sum-evens.pbm --preset add-edge-tests
+bun run src/index.ts edit ./sum-evens.pbm --preset translate-es
+
+# Use case 3: Inspect & preview PDFs locally in the browser
+bun run src/index.ts viewer --dir .. --port 3456
 ```
+
+### Differences from `jtk`
 
 | Dimension | `jtk` (Unchanged) | `pedit` (Unified Tool) |
 |---|---|---|
@@ -45,11 +68,9 @@ bun run export ./dist-pages
 ```
 
 - **Live mode (`src/viewer-server.ts`):** Scans folder, auto-builds PDFs (`jtk make pdf` + Chrome fallback), and exposes **Rebuild PDF**, **`jtk make`**, and **`jtk lint`**.
-- **Static mode (`src/export-static.ts`):** Exports `index.html`, `manifest.json`, PDFs, and sanitized `files.json` + local browser `.pbm` folder/drag-and-drop viewer.
+- **Static mode (`src/export-static.ts`):** Exports `index.html`, `manifest.json`, PDFs, and sanitized `files.json` + browser-only **Open `.pbm` from PC** / drag-and-drop (keeps previously opened problems in the sidebar list).
 
 ## How to Verify & Test (For Professors)
-
-Run these checks in order to verify every part works deterministically:
 
 ```bash
 cd pedit && bun install
@@ -57,9 +78,10 @@ cd pedit && bun install
 # 1. Unit tests (write guards blocking *.cor/problem.yml, YAML edits, .pbm discovery)
 bun test
 
-# 2. CLI smoke check
+# 2. CLI inspect & show safety check
 bun run src/index.ts --help
 bun run src/index.ts list --dir .. --json
+bun run src/index.ts show ../generated-demo/sum-evens.pbm problem.en.tex
 
 # 3. Verify unmodified jtk integration on a demo problem
 bun run src/index.ts build ../generated-demo/sum-evens.pbm --json
@@ -76,13 +98,13 @@ bun run src/index.ts viewer --dir .. --port 3456
 
 - Note: In `pedit-demo` (public demo mirror), replace `../generated-demo/sum-evens.pbm` with `../demo-problems/sum-evens.pbm`.
 
-## Architecture
+## Technical Details
 
-- `src/index.ts` — CLI router (`list`, `status`, `show`, `build`, `pdf`, `lint`, `verify`, `clean`, `meta`, `handler`, `models`, `presets`, `create`, `edit`, `chat`, `viewer`).
-- `src/jtk.ts` — Subprocess wrapper for `jtk` and `bun run generate.ts`.
+- `src/index.ts` — CLI router (`list`, `status`, `show`, `build`, `pdf`, `lint`, `verify`, `clean`, `meta`, `handler`, `models`, `presets`, `create`, `edit`, `chat`, `viewer`) + path-traversal/`problem.yml` guard on `show`.
+- `src/jtk.ts` — Subprocess wrapper for unmodified `jtk` and `bun run generate.ts`.
 - `src/pbm.ts` — `.pbm` scanner, YAML updaters, and write guard (`assertSafeRelativePath`).
 - `src/pdf.ts` — `jtk make pdf` runner + headless Chrome HTML-to-PDF fallback.
-- `src/ai.ts` — `@openrouter/sdk` client and closed-loop retry engine.
-- `src/viewer-server.ts` & `src/export-static.ts` — Local server and static Pages exporter.
+- `src/ai.ts` — `@openrouter/sdk` client, hidden `spec/` & `skills/` prompt loader, and closed-loop retry engine.
+- `src/viewer-server.ts` & `src/export-static.ts` — Local Bun server and static Pages exporter.
 - `public/index.html` — Unified single-page UI (CLI at top, PDF Viewer below).
 - `tests/pedit.test.ts` — Unit tests (`bun test`).

@@ -600,6 +600,9 @@ bun run src/index.ts viewer --dir ..</pre>
       if (!p) return;
       state.selected = p;
       state.lang = p.languages[0] || Object.keys(p.pdfs || {})[0] || 'en';
+      if (state.tab === 'log' && (state.mode !== 'server' || p.localFiles)) {
+        state.tab = 'pdf';
+      }
       renderList();
       renderToolbar();
       await loadFiles();
@@ -766,6 +769,7 @@ bun run src/index.ts viewer --dir ..</pre>
             continue;
           }
           if (base === 'problem.pdf' || base === 'statement.pdf') {
+            langs.add('en');
             if (!pdfs.en) pdfs.en = URL.createObjectURL(file);
             continue;
           }
@@ -958,6 +962,7 @@ bun run src/index.ts viewer --dir ..</pre>
         grouped.get(pbmRel).push({ inner, file: f });
       }
       await ingestPbmEntries(grouped, fileList[0].webkitRelativePath.split('/')[0] || 'folder');
+      e.target.value = '';
     });
 
     function escapeHtml(s) {
