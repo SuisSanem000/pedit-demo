@@ -654,12 +654,167 @@ bun run src/index.ts viewer --dir ..</pre>
       const p = state.selected;
       if (!p) return null;
       if (p.localFiles) {
-        return p.pdfs?.[state.lang] || Object.values(p.pdfs || {})[0] || null;
+        return p.pdfs?.[state.lang] || (!p.languages?.includes(state.lang) ? Object.values(p.pdfs || {})[0] : null) || null;
       }
       if (state.mode === 'server') {
         return `/api/problems/${encodeURIComponent(p.id)}/pdf?lang=${encodeURIComponent(state.lang || 'en')}${rebuild ? '&rebuild=1' : ''}`;
       }
       return p.pdfs?.[state.lang] || Object.values(p.pdfs || {})[0] || null;
+    }
+
+    let browserPdfDepsPromise = null;
+    function ensureBrowserPdfDeps() {
+      if (browserPdfDepsPromise) return browserPdfDepsPromise;
+      browserPdfDepsPromise = (async () => {
+        if (!document.getElementById('katex-css')) {
+          const link = document.createElement('link');
+          link.id = 'katex-css';
+          link.rel = 'stylesheet';
+          link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
+          document.head.appendChild(link);
+        }
+        const loadScript = (src) => new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = src;
+          s.onload = resolve;
+          s.onerror = () => reject(new Error('Failed to load ' + src));
+          document.head.appendChild(s);
+        });
+        if (!window.katex) {
+          await loadScript('https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js');
+        }
+        if (!window.html2pdf) {
+          await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+        }
+      })();
+      return browserPdfDepsPromise;
+    }
+
+    function renderMathHtml(tex) {
+      const renderKatex = (expr, displayMode) => {
+        if (window.katex) {
+          try {
+            return window.katex.renderToString(expr.trim(), { displayMode, throwOnError: false });
+          } catch {}
+        }
+        return `<code>${escapeHtml(expr.trim())}</code>`;
+      };
+      let out = tex
+        .replace(/\\begin\{htmlonly\}[\s\S]*?\\end\{htmlonly\}/g, '')
+        .replace(/\\begin\{latexonly\}|\\end\{latexonly\}/g, '')
+        .replace(/\\medskip|\\smallskip|\\bigskip/g, '<br/>')
+        .replace(/\\,/g, '&thinsp;')
+        .replace(/\\ldots/g, '...')
+        .replace(/\\textbf\{([^{}]*)\}/g, '<strong>$1</strong>')
+        .replace(/\\emph\{([^{}]*)\}/g, '<em>$1</em>')
+        .replace(/\\texttt\{([^{}]*)\}/g, '<code>$1</code>')
+        .replace(/\\url\{([^{}]*)\}/g, '<a href="$1">$1</a>')
+        .replace(/\\begin\{itemize\}/g, '<ul>').replace(/\\end\{itemize\}/g, '</ul>')
+        .replace(/\\begin\{enumerate\}/g, '<ol>').replace(/\\end\{enumerate\}/g, '</ol>')
+        .replace(/\\item\s+/g, '<li>');
+      out = out.replace(/\$\$([\s\S]*?)\$\$/g, (_, m) => `<div style="margin:0.5rem 0;text-align:center;">${renderKatex(m, true)}</div>`);
+      out = out.replace(/\$([^$]+)\$/g, (_, m) => renderKatex(m, false));
+      out = out.replace(/\n\s*\n/g, '</p><p>');
+      return `<p>${out}</p>`;
+    }
+
+    function buildClientStatementHtml(p, lang) {
+      const texKey = `problem.${lang}.tex`;
+      const altTexKey = Object.keys(p.localFiles || {}).find(k => /^problem\.[a-z]{2}\.tex$/.test(k));
+      const tex = p.localFiles?.[texKey] || (altTexKey ? p.localFiles[altTexKey] : '') || '';
+      const titleMatch = /\\Problem\{([^{}]*)\}/.exec(tex);
+      const title = p.title || (titleMatch ? titleMatch[1].trim() : p.name.replace(/\.pbm$/, ''));
+
+      const labels = {
+        en: { Statement: 'Statement', Input: 'Input', Output: 'Output', Observation: 'Observation', Precondition: 'Precondition', Author: 'Author', Samples: 'Sample Input / Output' },
+        ca: { Statement: 'Enunciat', Input: 'Entrada', Output: 'Sortida', Observation: 'Observació', Precondition: 'Precondició', Author: 'Autor', Samples: 'Exemples' },
+        es: { Statement: 'Enunciado', Input: 'Entrada', Output: 'Salida', Observation: 'Observación', Precondition: 'Precondición', Author: 'Autor', Samples: 'Ejemplos' }
+      }[lang] || { Statement: 'Statement', Input: 'Input', Output: 'Output', Observation: 'Observation', Precondition: 'Precondition', Author: 'Author', Samples: 'Samples' };
+
+      const markerRe = /\\(Statement|Observation|Input|Output|Precondition|Author)\b/g;
+      const matches = Array.from(tex.matchAll(markerRe));
+      const sections = [];
+      for (let i = 0; i < matches.length; i++) {
+        const start = matches[i].index + matches[i][0].length;
+        const end = i + 1 < matches.length ? matches[i + 1].index : tex.length;
+        let body = tex.slice(start, end)
+          .replace(/\\Sample(One|Two)Col/g, '')
+          .replace(/\\Sample\b/g, '')
+          .replace(/\\begin\{verbatim\}[\s\S]*?\\end\{verbatim\}/g, '')
+          .trim();
+        if (!body) continue;
+        const key = matches[i][1];
+        sections.push({ heading: labels[key] || key, html: renderMathHtml(body) });
+      }
+      if (!sections.length && tex.trim()) {
+        sections.push({ heading: labels.Statement, html: renderMathHtml(tex) });
+      }
+
+      const sampleInps = Object.keys(p.localFiles || {}).filter(k => k.includes('sample') && k.endsWith('.inp')).sort();
+      const samplesHtml = sampleInps.map((inp, idx) => {
+        const cor = inp.replace(/\.inp$/, '.cor');
+        const inpText = p.localFiles[inp] || '';
+        const corText = p.localFiles[cor] || '(not generated yet)';
+        return `
+          <div style="margin-bottom:10px;page-break-inside:avoid;">
+            <div style="font-weight:700;font-size:12px;margin-bottom:4px;color:#333;">${escapeHtml(inp.replace(/\.inp$/, '') || ('Sample ' + (idx + 1)))}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <pre style="margin:0;padding:8px;background:#f7f9fb;border:1px solid #d0d7de;border-radius:4px;font-size:11px;white-space:pre-wrap;font-family:monospace;">${escapeHtml(inpText)}</pre>
+              <pre style="margin:0;padding:8px;background:#f7f9fb;border:1px solid #d0d7de;border-radius:4px;font-size:11px;white-space:pre-wrap;font-family:monospace;">${escapeHtml(corText)}</pre>
+            </div>
+          </div>`;
+      }).join('');
+
+      return `
+        <div style="font-family:Georgia,'Times New Roman',serif;color:#111;padding:10px 18px;line-height:1.55;font-size:13.5px;background:#fff;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:14px;">
+            <h1 style="margin:0;font-size:21px;font-family:system-ui,-apple-system,sans-serif;">${escapeHtml(title)}</h1>
+            <span style="font-size:11px;color:#555;font-family:system-ui,sans-serif;">JUTGE.ORG • ${escapeHtml(lang.toUpperCase())}</span>
+          </div>
+          ${sections.map(s => `<h2 style="font-size:14.5px;margin:14px 0 6px;font-family:system-ui,-apple-system,sans-serif;color:#1f2328;">${escapeHtml(s.heading)}</h2><div>${s.html}</div>`).join('')}
+          ${samplesHtml ? `<h2 style="font-size:14.5px;margin:16px 0 8px;font-family:system-ui,-apple-system,sans-serif;color:#1f2328;">${escapeHtml(labels.Samples)}</h2>${samplesHtml}` : ''}
+        </div>`;
+    }
+
+    let activeCompileKey = null;
+    async function compileLocalPdf(p, lang) {
+      const key = `${p.id}::${lang}`;
+      if (activeCompileKey === key) return;
+      activeCompileKey = key;
+      const area = document.getElementById('contentArea');
+      area.innerHTML = `<div class="empty"><strong>Compiling PDF statement (${escapeHtml(lang.toUpperCase())})...</strong><p style="margin-top:0.4rem;">Rendering LaTeX math and samples locally in your browser (nothing is uploaded).</p></div>`;
+      try {
+        await ensureBrowserPdfDeps();
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'position:fixed;left:-10000px;top:0;width:740px;background:#fff;z-index:-1;';
+        wrapper.innerHTML = buildClientStatementHtml(p, lang);
+        document.body.appendChild(wrapper);
+        const blob = await window.html2pdf().set({
+          margin: 10,
+          filename: `${p.name}.${lang}.pdf`,
+          image: { type: 'jpeg', quality: 0.96 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).from(wrapper.firstElementChild).outputPdf('blob');
+        document.body.removeChild(wrapper);
+        const blobUrl = URL.createObjectURL(blob);
+        p.pdfs = p.pdfs || {};
+        p.pdfs[lang] = blobUrl;
+        if (state.selected?.id === p.id && state.lang === lang && state.tab === 'pdf') {
+          const openLink = document.getElementById('openPdfLink');
+          openLink.hidden = false;
+          openLink.href = blobUrl;
+          area.innerHTML = `<iframe src="${blobUrl}"></iframe>`;
+        }
+      } catch (err) {
+        if (state.selected?.id === p.id && state.tab === 'pdf') {
+          area.innerHTML = `<div class="empty">Could not compile PDF in browser (${escapeHtml(err?.message || err)}).<div style="margin-top:0.75rem;"><button class="btn primary" type="button" id="switchToTexBtn">View LaTeX Statement</button></div></div>`;
+          const btn = document.getElementById('switchToTexBtn');
+          if (btn) btn.onclick = () => { state.tab = 'tex'; renderContent(); };
+        }
+      } finally {
+        if (activeCompileKey === key) activeCompileKey = null;
+      }
     }
 
     function updateTabs() {
@@ -681,6 +836,11 @@ bun run src/index.ts viewer --dir ..</pre>
 
       if (state.tab === 'pdf') {
         if (!pdfUrl) {
+          const hasTex = p.localFiles && Object.keys(p.localFiles).some(k => /^problem\.[a-z]{2}\.tex$/.test(k));
+          if (hasTex) {
+            compileLocalPdf(p, state.lang || p.languages?.[0] || 'en');
+            return;
+          }
           area.innerHTML = `<div class="empty">No precompiled PDF found in this folder (${escapeHtml(state.lang || 'en')}).${state.mode === 'server' && !p.localFiles ? ' Click <strong>Rebuild PDF</strong> to compile via <code>jtk make pdf</code>.' : ' Run <code>pedit pdf &lt;problem.pbm&gt;</code> locally to build its PDF.'}<div style="margin-top:0.75rem;"><button class="btn primary" type="button" id="switchToTexBtn">View LaTeX Statement</button></div></div>`;
           const btn = document.getElementById('switchToTexBtn');
           if (btn) btn.onclick = () => { state.tab = 'tex'; renderContent(); };
