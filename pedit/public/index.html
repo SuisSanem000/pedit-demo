@@ -530,24 +530,33 @@ bun run src/index.ts viewer --dir .. --port 3456</pre>
     const LOCAL_STORAGE_KEY = 'pedit_saved_local_problems_v1';
 
     function saveLocalProblemsToStorage() {
-      try {
-        const locals = state.problems
-          .filter(p => p.localFiles)
-          .map(p => ({
+      const locals = state.problems
+        .filter(p => p.localFiles)
+        .map(p => {
+          const compactFiles = {};
+          for (const [k, v] of Object.entries(p.localFiles || {})) {
+            if (k.startsWith('private-') && (k.endsWith('.inp') || k.endsWith('.cor'))) continue;
+            if (typeof v === 'string' && v.length <= 100000) compactFiles[k] = v;
+          }
+          return {
             id: p.id,
             name: p.name,
             relPath: p.relPath,
             title: p.title,
             languages: p.languages,
             pdfs: {},
-            localFiles: p.localFiles
-          }));
-        if (locals.length) {
+            localFiles: compactFiles
+          };
+        });
+      while (locals.length) {
+        try {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(locals));
-        } else {
-          localStorage.removeItem(LOCAL_STORAGE_KEY);
+          return;
+        } catch {
+          locals.shift();
         }
-      } catch { }
+      }
+      try { localStorage.removeItem(LOCAL_STORAGE_KEY); } catch { }
     }
 
     function loadLocalProblemsFromStorage() {
@@ -980,7 +989,8 @@ bun run src/index.ts viewer --dir .. --port 3456</pre>
           const ymlM = /^problem\.([a-z]{2})\.yml$/.exec(base);
           if (ymlM) langs.add(ymlM[1]);
 
-          if (/\.(tex|yml|cc|cpp|py|hs|clj|ts|inp|cor|ops|md)$/.test(base)) {
+          if (base.startsWith('private-') && (base.endsWith('.inp') || base.endsWith('.cor'))) continue;
+          if (/\.(tex|yml|cc|cpp|py|hs|clj|ts|inp|cor|ops|md)$/.test(base) && file.size <= 262144) {
             const txt = await file.text();
             localFiles[base] = txt;
             if (ymlM) {
